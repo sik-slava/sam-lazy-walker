@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-lazy-walker
+
+Parameters:
+  AppName:
+    Type: String
+    Default: lazy-walker
+  DynamoDbTableName: 
+    Type: String
+    Default: lazy-walker-data
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+
+Resources:
+  MainLambda:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/
+      Handler: app.handler
+      Runtime: nodejs16.x
+      MemorySize: 256
+      Tracing: Active
+      FunctionName: !Sub '${AppName}-main-lambda'
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DynamoDbTableName 
+      Architectures:
+        - x86_64
+      Events:
+        TruckAndDevice:
+          Type: IoTRule
+          Properties:
+            AwsIotSqlVersion: '2016-03-23'
+            Sql: SELECT * FROM 'sdk/#'
+      Tags:
+        AppName: !Ref AppName
+        Kind: lambda
+  
+  MainTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoDbTableName
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: item_type
+          AttributeType: S
+      LocalSecondaryIndexes:
+        - IndexName: pk-item_type-index
+          KeySchema:
+            - AttributeName: pk
+              KeyType: HASH
+            - AttributeName: item_type
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Kind
+          Value: db
+
+Outputs:
+  MainLambda:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt MainLambda.Arn
+  MainLambdaRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt MainLambda.Arn
