@@ -31,12 +31,22 @@ Resources:
           TABLE_NAME: !Ref DynamoDbTableName 
       Architectures:
         - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDbTableName
       Events:
         TruckAndDevice:
           Type: IoTRule
           Properties:
             AwsIotSqlVersion: '2016-03-23'
-            Sql: SELECT * FROM 'sdk/#'
+            Sql: 
+              SELECT
+                topic(3) as device_type,
+                topic(4) as device_id,
+                timestamp() as timestamp_ms,
+                latitude,
+                longitude                
+              FROM 'v1/gps/+/#'  
       Tags:
         AppName: !Ref AppName
         Kind: lambda
