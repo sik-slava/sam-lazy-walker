@@ -13,8 +13,11 @@ const makeLogger = (context = {}) => {
     info(message, ctx = {}) {
       write('INFO', message, ctx)
     },
+    warn(message, ctx = {}) {
+      write('WARN', message, ctx)
+    },
     error(e, message, ctx = {}) {
-      write('ERROR', message, { errorName: e.name, errorMessage: e.message, ...ctx })
+      write('ERROR', message, { errorName: e?.name, errorMessage: e?.message, ...ctx })
     }
   }
 }

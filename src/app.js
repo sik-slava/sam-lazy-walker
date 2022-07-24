@@ -1,11 +1,14 @@
 import logger from './logger';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+
+const EARTH_RADIUS = 6371e3;
 const TABLE_NAME = process.env.TABLE_NAME;
 
 const _ = new DynamoDBClient({
   region: process.env.AWS_REGION,
 });
+_.middlewareStack.add((next, opt) => (args) => { args.input })
 const client = DynamoDBDocumentClient.from(_, {
   marshallOptions: {
     convertEmptyValues: true,
@@ -13,6 +16,40 @@ const client = DynamoDBDocumentClient.from(_, {
     convertClassInstanceToMap: true
   }
 });
+const DeviceType = Object.freeze({
+  VEHICLE: 'vehicle',
+  HANDHELD: 'handheld'
+});
+
+
+/**
+ * @typedef {Object} GpsCoordinates
+ * @property {Number} latitude
+ * @property {Number} longitude
+ */
+
+/**
+ * 
+ * @param {GpsCoordinates} left 
+ * @param {GpsCoordinates} right 
+ */
+const getDistanceBetween = (left, right) => {
+  const lat1 = left.latitude * Math.PI / 180;
+  const lat2 = right.latitude * Math.PI / 180;
+  const delta = {
+    lat: right.latitude - left.latitude,
+    lon: right.latitude - left.latitude,
+  };
+
+  const a =
+    Math.sin(delta.lat / 2) * Math.sin(delta.lat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) *
+    Math.sin(lat2 / 2) * Math.sin(delta.lon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS * c;
+
+};
 
 /**
  *
@@ -30,21 +67,82 @@ export async function handler(event, context) {
   const log = logger.for(context);
   log.info('Received IOT message', { event });
 
-  const cmd = new PutCommand({
+  const put = new PutCommand({
     TableName: TABLE_NAME,
     ReturnValues: 'NONE',
     Item: {
       pk: `${event.device_type}#${event.device_id}`,
       sk: `at#${event.timestamp_at}`,
-      item_type: `gpc#${event.device_type}`,
+      item_type: `gps#${event.device_type}`,
       payload: {
-        lat: event.latitude,
-        lon: event.longitude
+        latitude: event.latitude,
+        longitude: event.longitude
       }
     }
   });
 
-  await client.send(cmd)
-    .then(res => log.info('Payload has been stored into db', res.$metadata))
-    .catch(e => log.error(e, 'Failed to store event payload in db - eating it'));
+  await client.send(put)
+    .then(res => log.info('Payload has been stored in db', res.$metadata))
+    .catch(e => {
+      log.error(e, 'Failed to store event payload in db');
+      throw e;
+    });
+
+
+  // check is performed when vehicle announces its location   
+  if (event.device_type !== DeviceType.VEHICLE)
+    return;
+
+  let query = new QueryCommand({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: '#pk = :pk and begins_with(#sk, :sk)',
+    ExpressionAttributeNames: {
+      '#pk': 'pk',
+      '#sk': 'sk',
+    },
+    ExpressionAttributeValues: {
+      ':pk': `${DeviceType.VEHICLE}#${event.device_id}`,
+      ':sk': `${DeviceType.HANDHELD}`
+    }
+  });
+
+  const { Items, $metadata } = await client.send(query);
+  if (Items?.length !== 1) {
+    log.error(null, 'Invalid mapping between vehicle and handheld', $metadata);
+    throw new Error('Unable to get device by truck');
+  };
+
+  const deviceRow = Items[0];
+  deviceRow.mac_address;
+
+  query = new QueryCommand({
+    TableName: TABLE_NAME,
+    ScanIndexForward: false,
+    Limit: 1,
+    KeyConditionExpression: '#pk = :pk and begins_with(#sk, :sk)',
+    ExpressionAttributeNames: {
+      '#pk': 'pk',
+      '#sk': 'sk',
+    },
+    ExpressionAttributeValues: {
+      ':pk': `${DeviceType.VEHICLE}#${event.device_id}`,
+      ':sk': `at#`
+    }
+  });
+
+  const payloadResponse = await client.send(query);
+  log.info('Got response from payload query', payloadResponse.$metadata);
+
+  if (!payloadResponse.Items?.length) {
+    log.warn('No location data found handheld', { handheld: device_id });
+    return;
+  }
+
+  const distance = getDistanceBetween(
+    { latitude: event.latitude, longitude: event.latitude },
+    payloadResponse.Items[0].payload
+  );
+
+  if (distance >= 50)
+    log.info('GOT IT - DISTANCE IS MORE THAN 50m')
 }

@@ -12,14 +12,16 @@
     "axios": ">=0.21.1"
   },
   "scripts": {
-    "test": "mocha src/tests/unit/"
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/jest": "^28.1.6",
     "chai": "^4.2.0",
     "eslint": "^8.20.0",
     "eslint-config-standard": "^17.0.0",
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-n": "^15.2.4",
-    "eslint-plugin-promise": "^6.0.0"
+    "eslint-plugin-promise": "^6.0.0",
+    "jest": "^28.1.3"
   }
 }
