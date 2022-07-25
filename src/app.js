@@ -1,6 +1,6 @@
 const logger = require('./logger');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 
 const EARTH_RADIUS = 6371e3;
 const TABLE_NAME = process.env.TABLE_NAME;
@@ -20,7 +20,6 @@ const DeviceType = Object.freeze({
   HANDHELD: 'handheld'
 });
 
-
 /**
  * @typedef {Object} GpsCoordinates
  * @property {Number} latitude
@@ -28,16 +27,16 @@ const DeviceType = Object.freeze({
  */
 
 /**
- * 
- * @param {GpsCoordinates} left 
- * @param {GpsCoordinates} right 
+ *
+ * @param {GpsCoordinates} left
+ * @param {GpsCoordinates} right
  */
 const getDistanceBetween = (left, right) => {
   const lat1 = left.latitude * Math.PI / 180;
   const lat2 = right.latitude * Math.PI / 180;
   const delta = {
-    lat: (right.latitude - left.latitude)* Math.PI / 180,
-    lon: right.longitude - left.longitude*Math.PI / 180,
+    lat: (right.latitude - left.latitude) * Math.PI / 180,
+    lon: right.longitude - left.longitude * Math.PI / 180,
   };
 
   const a =
@@ -47,7 +46,6 @@ const getDistanceBetween = (left, right) => {
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS * c;
-
 };
 
 /**
@@ -87,12 +85,10 @@ module.exports.handler = async (event, context) => {
       throw e;
     });
 
+  // check is performed when vehicle announces its location
+  if (event.device_type !== DeviceType.VEHICLE) { return }
 
-  // check is performed when vehicle announces its location   
-  if (event.device_type !== DeviceType.VEHICLE)
-    return;
-
-  // get handheld by truck  
+  // get handheld by truck
   let query = new QueryCommand({
     TableName: TABLE_NAME,
     KeyConditionExpression: '#pk = :pk and begins_with(#sk, :sk)',
@@ -110,7 +106,7 @@ module.exports.handler = async (event, context) => {
   if (Items?.length !== 1) {
     log.error(null, 'Invalid mapping between vehicle and handheld', $metadata);
     throw new Error('Unable to get device by truck');
-  };
+  }
 
   // get latest reported position of handheld
   query = new QueryCommand({
@@ -141,6 +137,5 @@ module.exports.handler = async (event, context) => {
     payloadResponse.Items[0].payload
   );
 
-  if (distance >= 50)
-    log.info('GOT IT - DISTANCE IS MORE THAN 50m')
-}
+  if (distance >= 50) { log.info('GOT IT - DISTANCE IS MORE THAN 50m') }
+};
