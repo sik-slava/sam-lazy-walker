@@ -13,6 +13,8 @@ module.exports = {
   },
   rules: {
     semi: ['error', 'always', { omitLastInOneLineBlock: true }],
-    'comma-dangle': ['error', 'only-multiline']
+    curly: ['error', 'multi'],
+    'comma-dangle': ['error', 'only-multiline'],
+    'max-len': ['error', { code: 100 }]
   }
 };
