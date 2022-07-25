@@ -16,7 +16,7 @@ const getDistanceBetween = (left, right) => {
   const lat2 = right.lat * Math.PI / 180;
   const delta = {
     lat: (right.lat - left.lat) * Math.PI / 180,
-    lon: right.lon - left.lon * Math.PI / 180
+    lon: (right.lon - left.lon) * Math.PI / 180
   };
 
   const a =
