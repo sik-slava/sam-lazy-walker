@@ -12,7 +12,7 @@ module.exports = {
     ecmaVersion: 'latest'
   },
   rules: {
-    'semi': ['always'],
-    'comma-dangle': ['always']
+    semi: ['error', 'always', { omitLastInOneLineBlock: true }],
+    'comma-dangle': ['error', 'only-multiline']
   }
-}
+};

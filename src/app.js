@@ -119,7 +119,7 @@ module.exports.handler = async (event, context) => {
       '#sk': 'sk',
     },
     ExpressionAttributeValues: {
-      ':pk': `${DeviceType.VEHICLE}#${Items[0].mac_address}`,
+      ':pk': `${DeviceType.VEHICLE}#${Items[0].device_id}`,
       ':sk': 'at#'
     }
   });
