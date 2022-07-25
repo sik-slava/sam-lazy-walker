@@ -36,7 +36,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDbTableName
         - SNSPublishMessagePolicy:
-            TopicName: !Ref AlarmTopic 
+            TopicName: !GetAtt AlarmTopic.TopicName 
       Events:
         TruckAndDevice:
           Type: IoTRule
@@ -98,12 +98,30 @@ Resources:
         - Key: Kind
           Value: sqs-queue
   
+  SampleQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SampleQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt SampleQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref AlarmTopic          
+  
   SampleQueueSubscription: 
     Type: AWS::SNS::Subscription
     Properties:
       Protocol: sqs
       TopicArn: !Ref AlarmTopic
-      Endpoint: !GetAtt SampleQueue
+      Endpoint: !GetAtt SampleQueue.Arn
       RawMessageDelivery: true
       # FilterPolicy:
       #   type:
