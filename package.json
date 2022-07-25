@@ -1,8 +1,8 @@
 {
-  "name": "hello_world",
+  "name": "sam-lazy-walker",
   "version": "1.0.0",
   "description": "hello world sample for NodeJS",
-  "main": "app.js",
+  "main": "src/app.js",
   "author": "SAM CLI",
   "license": "MIT",
   "dependencies": {
@@ -12,7 +12,8 @@
     "axios": ">=0.21.1"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "lint": "node_modules/.bin/eslint --no-eslintrc src/**"
   },
   "devDependencies": {
     "@types/jest": "^28.1.6",

@@ -22,4 +22,4 @@ const makeLogger = (context = {}) => {
   }
 }
 
-export default makeLogger()
+module.exports = makeLogger(); 

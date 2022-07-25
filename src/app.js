@@ -1,6 +1,6 @@
-import logger from './logger';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+const logger = require('./logger');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
 
 const EARTH_RADIUS = 6371e3;
 const TABLE_NAME = process.env.TABLE_NAME;
@@ -8,7 +8,6 @@ const TABLE_NAME = process.env.TABLE_NAME;
 const _ = new DynamoDBClient({
   region: process.env.AWS_REGION,
 });
-_.middlewareStack.add((next, opt) => (args) => { args.input })
 const client = DynamoDBDocumentClient.from(_, {
   marshallOptions: {
     convertEmptyValues: true,
@@ -37,14 +36,14 @@ const getDistanceBetween = (left, right) => {
   const lat1 = left.latitude * Math.PI / 180;
   const lat2 = right.latitude * Math.PI / 180;
   const delta = {
-    lat: right.latitude - left.latitude,
-    lon: right.latitude - left.latitude,
+    lat: (right.latitude - left.latitude)* Math.PI / 180,
+    lon: right.longitude - left.longitude*Math.PI / 180,
   };
 
   const a =
     Math.sin(delta.lat / 2) * Math.sin(delta.lat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) *
-    Math.sin(lat2 / 2) * Math.sin(delta.lon / 2);
+    Math.sin(delta.lon / 2) * Math.sin(delta.lon / 2) *
+    Math.cos(lat1) * Math.cos(lat2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS * c;
@@ -63,7 +62,7 @@ const getDistanceBetween = (left, right) => {
  * @returns {Object} object - API Gateway Lambda Proxy Output Format
  *
  */
-export async function handler(event, context) {
+module.exports.handler = async (event, context) => {
   const log = logger.for(context);
   log.info('Received IOT message', { event });
 
@@ -72,7 +71,7 @@ export async function handler(event, context) {
     ReturnValues: 'NONE',
     Item: {
       pk: `${event.device_type}#${event.device_id}`,
-      sk: `at#${event.timestamp_at}`,
+      sk: `at#${event.timestamp_ms}`,
       item_type: `gps#${event.device_type}`,
       payload: {
         latitude: event.latitude,
@@ -93,6 +92,7 @@ export async function handler(event, context) {
   if (event.device_type !== DeviceType.VEHICLE)
     return;
 
+  // get handheld by truck  
   let query = new QueryCommand({
     TableName: TABLE_NAME,
     KeyConditionExpression: '#pk = :pk and begins_with(#sk, :sk)',
@@ -102,7 +102,7 @@ export async function handler(event, context) {
     },
     ExpressionAttributeValues: {
       ':pk': `${DeviceType.VEHICLE}#${event.device_id}`,
-      ':sk': `${DeviceType.HANDHELD}`
+      ':sk': `${DeviceType.HANDHELD}#`
     }
   });
 
@@ -112,9 +112,7 @@ export async function handler(event, context) {
     throw new Error('Unable to get device by truck');
   };
 
-  const deviceRow = Items[0];
-  deviceRow.mac_address;
-
+  // get latest reported position of handheld
   query = new QueryCommand({
     TableName: TABLE_NAME,
     ScanIndexForward: false,
@@ -125,8 +123,8 @@ export async function handler(event, context) {
       '#sk': 'sk',
     },
     ExpressionAttributeValues: {
-      ':pk': `${DeviceType.VEHICLE}#${event.device_id}`,
-      ':sk': `at#`
+      ':pk': `${DeviceType.VEHICLE}#${Items[0].mac_address}`,
+      ':sk': 'at#'
     }
   });
 
@@ -134,7 +132,7 @@ export async function handler(event, context) {
   log.info('Got response from payload query', payloadResponse.$metadata);
 
   if (!payloadResponse.Items?.length) {
-    log.warn('No location data found handheld', { handheld: device_id });
+    log.warn('No location data found handheld', { handheld: event.device_id });
     return;
   }
 
