@@ -1,8 +1,8 @@
 const logger = require('./logger');
+const gps = require('./gps');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 
-const EARTH_RADIUS = 6371e3;
 const TABLE_NAME = process.env.TABLE_NAME;
 
 const _ = new DynamoDBClient({
@@ -21,34 +21,6 @@ const DeviceType = Object.freeze({
 });
 
 /**
- * @typedef {Object} GpsCoordinates
- * @property {Number} latitude
- * @property {Number} longitude
- */
-
-/**
- *
- * @param {GpsCoordinates} left
- * @param {GpsCoordinates} right
- */
-const getDistanceBetween = (left, right) => {
-  const lat1 = left.latitude * Math.PI / 180;
-  const lat2 = right.latitude * Math.PI / 180;
-  const delta = {
-    lat: (right.latitude - left.latitude) * Math.PI / 180,
-    lon: right.longitude - left.longitude * Math.PI / 180,
-  };
-
-  const a =
-    Math.sin(delta.lat / 2) * Math.sin(delta.lat / 2) +
-    Math.sin(delta.lon / 2) * Math.sin(delta.lon / 2) *
-    Math.cos(lat1) * Math.cos(lat2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return EARTH_RADIUS * c;
-};
-
-/**
  *
  * Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
  * @param {Object} event - API Gateway Lambda Proxy Input Format
@@ -61,8 +33,8 @@ const getDistanceBetween = (left, right) => {
  *
  */
 module.exports.handler = async (event, context) => {
-  const log = logger.for(context);
-  log.info('Received IOT message', { event });
+  const log = logger.for({ payload: event });
+  log.info('Received IOT payload');
 
   const put = new PutCommand({
     TableName: TABLE_NAME,
@@ -132,10 +104,13 @@ module.exports.handler = async (event, context) => {
     return;
   }
 
-  const distance = getDistanceBetween(
-    { latitude: event.latitude, longitude: event.latitude },
-    payloadResponse.Items[0].payload
+  const handheldPayload = payloadResponse.Items[0].payload;
+  const distance = gps.getDistanceBetween(
+    { lat: event.latitude, lon: event.latitude },
+    { lat: handheldPayload.latitude, lon: handheldPayload.latitude },
   );
+
+  log.info('Done calculating distance between devices', { distance });
 
   if (distance >= 50) { log.info('GOT IT - DISTANCE IS MORE THAN 50m') }
 };
