@@ -20,20 +20,23 @@ Resources:
   MainLambda:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: src/
-      Handler: app.handler
+      CodeUri: .
+      Handler: src/app.handler
       Runtime: nodejs16.x
       MemorySize: 256
       Tracing: Active
       FunctionName: !Sub '${AppName}-main-lambda'
       Environment:
         Variables:
-          TABLE_NAME: !Ref DynamoDbTableName 
+          TABLE_NAME: !Ref DynamoDbTableName
+          ALARM_TOPIC_ARN: !Ref AlarmTopic
       Architectures:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDbTableName
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref AlarmTopic 
       Events:
         TruckAndDevice:
           Type: IoTRule
@@ -81,7 +84,17 @@ Resources:
         - Key: AppName
           Value: !Ref AppName
         - Key: Kind
-          Value: db
+          Value: dynamodb-table
+  
+  AlarmTopic: 
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AppName}-alarm-topic'
+      Tags:
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Kind
+          Value: sns-topic
 
 Outputs:
   MainLambda:
