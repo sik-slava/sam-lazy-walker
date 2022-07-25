@@ -20,8 +20,8 @@ Resources:
   MainLambda:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: .
-      Handler: src/app.handler
+      CodeUri: src/
+      Handler: app.handler
       Runtime: nodejs16.x
       MemorySize: 256
       Tracing: Active
@@ -69,17 +69,6 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
-        - AttributeName: item_type
-          AttributeType: S
-      LocalSecondaryIndexes:
-        - IndexName: pk-item_type-index
-          KeySchema:
-            - AttributeName: pk
-              KeyType: HASH
-            - AttributeName: item_type
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
       Tags:
         - Key: AppName
           Value: !Ref AppName

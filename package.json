@@ -8,16 +8,14 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.131.0",
     "@aws-sdk/lib-dynamodb": "^3.131.0",
-    "aws-iot-device-sdk": "^2.2.12",
-    "axios": ">=0.21.1"
+    "aws-iot-device-sdk": "^2.2.12"
   },
   "scripts": {
-    "test": "jest",
+    "test": "node_modules/.bin/jest",
     "lint": "node_modules/.bin/eslint --no-eslintrc src/**"
   },
   "devDependencies": {
     "@types/jest": "^28.1.6",
-    "chai": "^4.2.0",
     "eslint": "^8.20.0",
     "eslint-config-standard": "^17.0.0",
     "eslint-plugin-import": "^2.26.0",

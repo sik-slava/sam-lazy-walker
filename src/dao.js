@@ -99,11 +99,11 @@ const findLastReportedLocation = async ({ deviceType, deviceId }, log = null) =>
       return {
         success: true,
         lat: Items[0].coordinates.lat,
-        lon: Items[0].coordinates.lat,
+        lon: Items[0].coordinates.lon,
       };
     })
     .catch(e => {
-      log.error(e, 'Failed to get last reported location');
+      log.error(e, 'Failed to find last reported location');
       return { success: false };
     });
 };
