@@ -84,6 +84,30 @@ Resources:
           Value: !Ref AppName
         - Key: Kind
           Value: sns-topic
+  
+  SampleQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AppName}-sample-queue'
+      MessageRetentionPeriod: 3600
+      ReceiveMessageWaitTimeSeconds: 5
+      VisibilityTimeout: 10
+      Tags:
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Kind
+          Value: sqs-queue
+  
+  SampleQueueSubscription: 
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      TopicArn: !Ref AlarmTopic
+      Endpoint: !GetAtt SampleQueue
+      RawMessageDelivery: true
+      # FilterPolicy:
+      #   type:
+      #     - 'lazy_walker'
 
 Outputs:
   MainLambda:

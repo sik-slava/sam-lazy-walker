@@ -1,6 +1,7 @@
 const logger = require('./logger');
 const gps = require('./gps');
 const dao = require('./dao');
+const publisher = require('./publisher');
 const { DeviceType, parseRawPayload } = require('./model');
 
 module.exports.handler = async (event, context) => {
@@ -35,5 +36,6 @@ module.exports.handler = async (event, context) => {
 
   log.info('Done calculating distance between devices', { distance });
 
-  if (distance >= 50) log.info('GOT IT - DISTANCE IS MORE THAN 50m');
+  if (distance >= parseInt(process.env.MAX_DISTANCE || 50))
+    await publisher.notifyLongDistance(payload, handheldCoordinates);
 };

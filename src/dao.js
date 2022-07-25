@@ -98,6 +98,8 @@ const findLastReportedLocation = async ({ deviceType, deviceId }, log = null) =>
       }
       return {
         success: true,
+        deviceType,
+        deviceId,
         lat: Items[0].coordinates.lat,
         lon: Items[0].coordinates.lon,
       };

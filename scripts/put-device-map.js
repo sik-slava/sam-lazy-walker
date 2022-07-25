@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 
 const VEHICLE_FMT = 'VV:AA:AA:AA:0{0}';
 const HANDHELD_FMT = 'HH:BB:BB:BB:0{0}';
@@ -34,6 +34,7 @@ const populate = async () => {
     .then(_ => console.log('Done inserting sample mapping between devices'));
 };
 
+// eslint-disable-next-line no-unused-vars
 const fetchMap = async (v) => {
   const query = new QueryCommand({
     TableName: 'lazy-walker-data',
@@ -52,4 +53,5 @@ const fetchMap = async (v) => {
   console.log(res);
 };
 
-fetchMap('VV:AA:AA:AA:04');
+populate();
+// fetchMap('VV:AA:AA:AA:04');
